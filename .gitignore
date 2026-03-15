@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.log
+
+# Virtual env
+.venv/
+venv/
+
+# Django
+*.pot
+*.pyc
+db.sqlite3
+media/
+
+# Environment variables
+.env
+.env.*
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js
+.next/
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Coverage
+coverage/
+htmlcov/
+
+# Docker
+*.pid
+*.seed
+
+# Build
+dist/
+build/
+
+# Misc
+*.swp
