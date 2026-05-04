@@ -34,19 +34,19 @@ class Booking(models.Model):
                 raise ValidationError("Check out date must be after check in date.")
         
         
-        if self.property_id:
-            if not self.property.is_rent():
+        if self.rental_property_id:
+            if not self.rental_property.is_rent():
                 raise ValidationError("Only properties with 'rent' deal type can be booked.")
             
-            if not self.property.is_published():
+            if not self.rental_property.is_published():
                 raise ValidationError("Only published properties can be booked.")
             
-        if self.property_id and self.user_id:
-            if self.property.owner_id == self.user_id:
+        if self.rental_property_id and self.user_id:
+            if self.rental_property.owner_id == self.user_id:
                 raise ValidationError("You cannot book your own property.")
             
-        if self.property_id and self.guests:
-            if self.guests > self.property.guests:
+        if self.rental_property_id and self.guests:
+            if self.guests > self.rental_property.guests:
                 raise ValidationError("Number of guests cannot exceed property's maximum guests.")        
 
         today = timezone.localdate()
@@ -61,7 +61,7 @@ class Booking(models.Model):
         return (self.check_out - self.check_in).days
     
     def __str__(self):
-        return f"Booking #{self.id} - {self.property.title}"
+        return f"Booking #{self.id} - {self.rental_property.title}"
     
     class Meta:
         verbose_name = 'Booking'

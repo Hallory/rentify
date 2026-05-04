@@ -1,4 +1,4 @@
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, mixins
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.utils import timezone
@@ -8,7 +8,7 @@ from .serializers import BookingSerializer
 from .models import Booking
 
 
-class BookingViewSet(viewsets.ModelViewSet):
+class BookingViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,mixins.CreateModelMixin, viewsets.GenericViewSet):
     serializer_class = BookingSerializer
     permission_classes = [permissions.IsAuthenticated]
     

@@ -41,8 +41,11 @@ class BookingSerializer(serializers.ModelSerializer):
         check_out = attrs.get('check_out')
         guests = attrs.get('guests')
         
-        if request is None and not request.user.is_anonymous:
+        if request is None or request.user.is_anonymous:
             raise serializers.ValidationError("User is not authenticated.")
+        
+        if not rental_property or not check_in or not check_out or guests is None:
+            raise serializers.ValidationError("Missing required fields.")
         
         if not rental_property.is_rent():
             raise serializers.ValidationError("Only properties with 'rent' deal type can be booked.")
