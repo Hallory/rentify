@@ -17,7 +17,7 @@ class SearchHistoryViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=["get"], permission_classes=[permissions.AllowAny])
     def popular(self, request):
         popular_queries = (
-            SearchHistory.objects.exclude(normilized_query="")
+            SearchHistory.objects.exclude(normalized_query="")
             .values("normalized_query")
             .annotate(count=Count("id"))
             .order_by("-count")[:10]
