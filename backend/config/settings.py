@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "reviews",
     "bookings",
     "favorites",
+    "analytics",
 ]
 
 REST_FRAMEWORK = {
