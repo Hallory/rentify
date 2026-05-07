@@ -13,7 +13,8 @@ class FavoriteViewSet(
 ):
     serializer_class = FavoriteSerializer
     permission_classes = [permissions.IsAuthenticated]
-
+    queryset = Favorite.objects.all()
+    
     def get_queryset(self):
         return Favorite.objects.filter(user=self.request.user).select_related(
             "user", "rental_property"

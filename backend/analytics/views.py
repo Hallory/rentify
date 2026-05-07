@@ -10,7 +10,8 @@ from .serializers import SearchHistorySerializer
 class SearchHistoryViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = SearchHistorySerializer
     permission_classes = [permissions.IsAuthenticated]
-
+    queryset = SearchHistory.objects.all()
+    
     def get_queryset(self):
         return SearchHistory.objects.filter(user=self.request.user)
 

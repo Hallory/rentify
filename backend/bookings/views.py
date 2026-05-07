@@ -11,6 +11,7 @@ from .models import Booking
 class BookingViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin,mixins.CreateModelMixin, viewsets.GenericViewSet):
     serializer_class = BookingSerializer
     permission_classes = [permissions.IsAuthenticated]
+    queryset = Booking.objects.all()
     
     def get_queryset(self):
         user = self.request.user
