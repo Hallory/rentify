@@ -27,7 +27,16 @@ def get_client_ip(request):
 
     return request.META.get("REMOTE_ADDR")
 
-
+class IsLandlordOrReadOnly(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return (
+            request.user.is_authenticated
+            and request.user.role == request.user.Roles.LANDLORD
+        )
+    
+    
 class IsOwnerOrReadOnly(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
@@ -37,7 +46,7 @@ class IsOwnerOrReadOnly(permissions.BasePermission):
 
 class PropertyViewSet(viewsets.ModelViewSet):
     serializer_class = PropertySerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+    permission_classes = [IsLandlordOrReadOnly, IsOwnerOrReadOnly]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = PropertyFilter
     search_fields = ["title", "description", "city", "district"]
