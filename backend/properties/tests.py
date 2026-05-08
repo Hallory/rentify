@@ -6,7 +6,7 @@ from users.models import User
 from .models import Property
 
 
-class PpopertyPermissionTests(APITestCase):
+class PropertyPermissionTests(APITestCase):
     def setUp(self):
         self.tenant = User.objects.create_user(
             email="tenant@test.com",
