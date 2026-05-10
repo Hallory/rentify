@@ -1,5 +1,6 @@
 import re
 
+from analytics.models import PropertyView, SearchHistory
 from django.db.models import F
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -7,8 +8,6 @@ from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
-
-from analytics.models import PropertyView, SearchHistory
 
 from .filters import PropertyFilter
 from .models import Property
@@ -27,6 +26,7 @@ def get_client_ip(request):
 
     return request.META.get("REMOTE_ADDR")
 
+
 class IsLandlordOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
@@ -35,8 +35,8 @@ class IsLandlordOrReadOnly(permissions.BasePermission):
             request.user.is_authenticated
             and request.user.role == request.user.Roles.LANDLORD
         )
-    
-    
+
+
 class IsOwnerOrReadOnly(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
@@ -135,9 +135,7 @@ class PropertyViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], permission_classes=[permissions.AllowAny])
     def popular(self, request):
-        queryset = self.get_queryset().order_by(
-            "-views_count"
-        )
+        queryset = self.get_queryset().order_by("-views_count")
 
         page = self.paginate_queryset(queryset)
         if page is not None:
@@ -145,4 +143,18 @@ class PropertyViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response(serializer.data)
 
         serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["patch"], url_path="toggle-active")
+    def toggle_active(self, request, pk=None):
+        rental_property = self.get_object()
+
+        if rental_property.status == Property.Status.PUBLISHED:
+            rental_property.status = Property.Status.ARCHIVED
+        else:
+            rental_property.status = Property.Status.PUBLISHED
+
+        rental_property.save(update_fields=["status", "updated_at"])
+
+        serializer = self.get_serializer(rental_property)
         return Response(serializer.data)

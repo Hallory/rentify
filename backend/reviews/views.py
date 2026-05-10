@@ -1,4 +1,5 @@
 from rest_framework import viewsets, permissions, mixins
+from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Review
 from .serializers import ReviewSerializer
@@ -19,6 +20,8 @@ class ReviewViewSet(
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["rental_property"]
     serializer_class = ReviewSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly]
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']

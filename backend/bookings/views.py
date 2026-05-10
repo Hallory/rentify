@@ -3,6 +3,7 @@ from django.utils import timezone
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Booking
 from .permissions import OwnerCantBookingPermissions
@@ -15,6 +16,8 @@ class BookingViewSet(
     mixins.CreateModelMixin,
     viewsets.GenericViewSet,
 ):
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["status"]
     serializer_class = BookingSerializer
     permission_classes = [permissions.IsAuthenticated, OwnerCantBookingPermissions]
     queryset = Booking.objects.all()
