@@ -1,14 +1,14 @@
-from rest_framework import status
-from rest_framework.test import APITestCase
-
 from datetime import timedelta
-from django.utils import timezone
 from decimal import Decimal
 
-from .models import Review
 from bookings.models import Booking
+from django.utils import timezone
 from properties.models import Property
+from rest_framework import status
+from rest_framework.test import APITestCase
 from users.models import User
+
+from .models import Review
 
 
 class ReviewPermissionTests(APITestCase):
@@ -53,7 +53,7 @@ class ReviewPermissionTests(APITestCase):
             zip_code="10115",
             status=Property.Status.PUBLISHED,
         )
-        
+
         self.booking = Booking.objects.create(
             user=self.tenant,
             rental_property=self.property,
@@ -62,9 +62,9 @@ class ReviewPermissionTests(APITestCase):
             total_price=Decimal("450.00"),
             check_in=timezone.localdate() + timedelta(days=10),
             check_out=timezone.localdate() + timedelta(days=13),
-            status=Booking.Status.CONFIRMED,
+            status=Booking.Status.COMPLETED,
         )
-        
+
         self.review = Review.objects.create(
             author=self.tenant,
             rental_property=self.property,
@@ -72,7 +72,7 @@ class ReviewPermissionTests(APITestCase):
             rating=4,
             comment="Great property!",
         )
-        
+
         self.booking_without_review = Booking.objects.create(
             user=self.tenant,
             rental_property=self.property,
@@ -81,9 +81,9 @@ class ReviewPermissionTests(APITestCase):
             total_price=Decimal("450.00"),
             check_in=timezone.localdate() + timedelta(days=10),
             check_out=timezone.localdate() + timedelta(days=13),
-            status=Booking.Status.CONFIRMED,
+            status=Booking.Status.COMPLETED,
         )
-        
+
         self.other_booking = Booking.objects.create(
             user=self.other_tenant,
             rental_property=self.property,
@@ -94,19 +94,26 @@ class ReviewPermissionTests(APITestCase):
             check_out=timezone.localdate() + timedelta(days=33),
             status=Booking.Status.CONFIRMED,
         )
-        
+
     def test_anonymous_can_read_reviews(self):
         response = self.client.get("/api/reviews/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
-        
-        
-    def test_user_can_create_review_for_own_confirmed_booking(self):
+
+    def test_user_can_create_review_for_own_completed_booking(self):
         self.client.force_authenticate(user=self.tenant)
-        
-        response = self.client.post("/api/reviews/", {"booking": self.booking_without_review.id, "rating": 5, "comment": "Great property!"}, format="json")
-        
+
+        response = self.client.post(
+            "/api/reviews/",
+            {
+                "booking": self.booking_without_review.id,
+                "rating": 5,
+                "comment": "Great property!",
+            },
+            format="json",
+        )
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["author"], self.tenant.id)
         self.assertEqual(response.data["rental_property"], self.property.id)
@@ -114,31 +121,44 @@ class ReviewPermissionTests(APITestCase):
         self.assertEqual(response.data["rating"], 5)
         self.assertEqual(response.data["comment"], "Great property!")
 
-        
     def test_user_cannot_create_review_for_another_users_booking(self):
         self.client.force_authenticate(user=self.tenant)
-        
-        response = self.client.post("/api/reviews/", {"booking": self.other_booking.id, "rating": 5, "comment": "Great property!"}, format="json")
-        
+
+        response = self.client.post(
+            "/api/reviews/",
+            {
+                "booking": self.other_booking.id,
+                "rating": 5,
+                "comment": "Great property!",
+            },
+            format="json",
+        )
+
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        
-        
+
     def test_author_can_update_review(self):
         self.client.force_authenticate(user=self.tenant)
-        
-        response = self.client.patch(f"/api/reviews/{self.review.id}/", {"rating": 5, "comment": "Updated comment!"}, format="json")
-        
+
+        response = self.client.patch(
+            f"/api/reviews/{self.review.id}/",
+            {"rating": 5, "comment": "Updated comment!"},
+            format="json",
+        )
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["author"], self.tenant.id)
         self.assertEqual(response.data["rental_property"], self.property.id)
         self.assertEqual(response.data["booking"], self.booking.id)
         self.assertEqual(response.data["rating"], 5)
         self.assertEqual(response.data["comment"], "Updated comment!")
-        
-        
+
     def test_non_author_cannot_update_review(self):
         self.client.force_authenticate(user=self.other_tenant)
-        
-        response = self.client.patch(f"/api/reviews/{self.review.id}/", {"rating": 5, "comment": "Updated comment!"}, format="json")
-        
+
+        response = self.client.patch(
+            f"/api/reviews/{self.review.id}/",
+            {"rating": 5, "comment": "Updated comment!"},
+            format="json",
+        )
+
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

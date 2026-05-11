@@ -1,9 +1,9 @@
 from django.db.models import Q
 from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import Booking
 from .permissions import OwnerCantBookingPermissions
@@ -92,6 +92,28 @@ class BookingViewSet(
         booking.status = Booking.Status.CANCELLED
         booking.cancelled_at = timezone.now()
         booking.save(update_fields=["status", "cancelled_at", "updated_at"])
+
+        serializer = self.get_serializer(booking)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["patch"])
+    def complete(self, request, pk=None):
+        booking = self.get_object()
+
+        if booking.rental_property.owner != request.user:
+            return Response(
+                {"detail": "Only property owners can complete bookings."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if booking.status != Booking.Status.CONFIRMED:
+            return Response(
+                {"detail": "Only confirmed bookings can be completed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        booking.status = Booking.Status.COMPLETED
+        booking.save(update_fields=["status", "updated_at"])
 
         serializer = self.get_serializer(booking)
         return Response(serializer.data, status=status.HTTP_200_OK)

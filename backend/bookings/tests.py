@@ -176,3 +176,29 @@ class BookingPermissionTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_landlord_can_complete_confirmed_booking(self):
+        self.booking.status = Booking.Status.CONFIRMED
+        self.booking.save(update_fields=["status"])
+
+        self.client.force_authenticate(user=self.landlord)
+
+        response = self.client.patch(f"/api/bookings/{self.booking.id}/complete/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, Booking.Status.COMPLETED)
+
+    def test_tenant_cannot_complete_booking(self):
+        self.booking.status = Booking.Status.CONFIRMED
+        self.booking.save(update_fields=["status"])
+
+        self.client.force_authenticate(user=self.tenant)
+
+        response = self.client.patch(f"/api/bookings/{self.booking.id}/complete/")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, Booking.Status.CONFIRMED)
