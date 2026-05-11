@@ -1,6 +1,5 @@
 from rest_framework import status
 from rest_framework.test import APITestCase
-
 from users.models import User
 
 from .models import Property
@@ -106,3 +105,29 @@ class PropertyPermissionTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.property.refresh_from_db()
         self.assertEqual(self.property.title, "Original Title")
+
+    def test_owner_can_toogle_property_active_status(self):
+        self.client.force_authenticate(user=self.landlord)
+
+        response = self.client.patch(
+            f"/api/properties/{self.property.id}/toggle-active/",
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.property.refresh_from_db()
+        self.assertEqual(self.property.status, Property.Status.ARCHIVED)
+
+    def test_non_owner_cannot_toggle_property_active_status(self):
+        self.client.force_authenticate(user=self.other_landlord)
+
+        response = self.client.patch(
+            f"/api/properties/{self.property.id}/toggle-active/",
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.property.refresh_from_db()
+        self.assertEqual(self.property.status, Property.Status.PUBLISHED)

@@ -2,12 +2,12 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.utils import timezone
+from properties.models import Property
 from rest_framework import status
 from rest_framework.test import APITestCase
+from users.models import User
 
 from bookings.models import Booking
-from properties.models import Property
-from users.models import User
 
 
 class BookingPermissionTests(APITestCase):
@@ -89,19 +89,17 @@ class BookingPermissionTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], self.booking.id)
-        
-        
+
     def test_tenant_can_cancel_own_booking(self):
         self.client.force_authenticate(user=self.tenant)
 
         response = self.client.patch(f"/api/bookings/{self.booking.id}/cancel/")
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.booking.refresh_from_db()
         self.assertEqual(self.booking.status, Booking.Status.CANCELLED)
         self.assertIsNotNone(self.booking.cancelled_at)
-        
-    
+
     def test_landlord_can_confirm_for_own_property(self):
         self.client.force_authenticate(user=self.landlord)
 
@@ -110,8 +108,7 @@ class BookingPermissionTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.booking.refresh_from_db()
         self.assertEqual(self.booking.status, Booking.Status.CONFIRMED)
-        
-        
+
     def test_tenant_cannot_confirm_booking(self):
         self.client.force_authenticate(user=self.tenant)
 
@@ -120,3 +117,62 @@ class BookingPermissionTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.booking.refresh_from_db()
         self.assertEqual(self.booking.status, Booking.Status.PENDING)
+
+    def test_user_cannot_create_overlapping_booking(self):
+        self.client.force_authenticate(user=self.other_tenant)
+
+        response = self.client.post(
+            "/api/bookings/",
+            {
+                "rental_property": self.property.id,
+                "check_in": timezone.localdate() + timedelta(days=11),
+                "check_out": timezone.localdate() + timedelta(days=14),
+                "guests": 2,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_landlord_can_book_other_landlords_property(self):
+        other_landlord = User.objects.create_user(
+            email="other_landlord@test.com",
+            username="other_landlord",
+            password="password123",
+            role=User.Roles.LANDLORD,
+        )
+
+        other_property = Property.objects.create(
+            owner=other_landlord,
+            title="Munich Apartment",
+            description="Nice apartment in Munich",
+            property_type=Property.PropertyType.STUDIO,
+            deal_type=Property.DealType.RENT,
+            guests=2,
+            rooms=1,
+            bedrooms=1,
+            bathrooms=1,
+            area_sqm=35,
+            price_per_night=Decimal("120.00"),
+            address="Teststrasse 2",
+            country="Germany",
+            city="Munich",
+            district="Center",
+            zip_code="80331",
+            status=Property.Status.PUBLISHED,
+        )
+
+        self.client.force_authenticate(user=self.landlord)
+
+        response = self.client.post(
+            "/api/bookings/",
+            {
+                "rental_property": other_property.id,
+                "check_in": timezone.localdate() + timedelta(days=11),
+                "check_out": timezone.localdate() + timedelta(days=14),
+                "guests": 2,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
