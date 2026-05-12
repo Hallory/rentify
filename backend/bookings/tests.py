@@ -202,3 +202,19 @@ class BookingPermissionTests(APITestCase):
 
         self.booking.refresh_from_db()
         self.assertEqual(self.booking.status, Booking.Status.CONFIRMED)
+
+    def test_user_can_create_back_to_back_booking(self):
+        self.client.force_authenticate(user=self.other_tenant)
+
+        response = self.client.post(
+            "/api/bookings/",
+            {
+                "rental_property": self.property.id,
+                "check_in": self.booking.check_out,
+                "check_out": self.booking.check_out + timedelta(days=2),
+                "guests": 2,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)

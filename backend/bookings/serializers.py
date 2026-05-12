@@ -72,8 +72,8 @@ class BookingSerializer(serializers.ModelSerializer):
         overlapping_bookings = Booking.objects.filter(
             rental_property=rental_property,
             status__in=[Booking.Status.PENDING, Booking.Status.CONFIRMED],
-            check_in__lte=check_out,
-            check_out__gte=check_in,
+            check_in__lt=check_out,
+            check_out__gt=check_in,
         )
         if overlapping_bookings.exists():
             raise serializers.ValidationError(
