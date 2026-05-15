@@ -131,3 +131,18 @@ class PropertyPermissionTests(APITestCase):
 
         self.property.refresh_from_db()
         self.assertEqual(self.property.status, Property.Status.PUBLISHED)
+
+    def test_search_understands_two_room_apartment_query(self):
+        response = self.client.post(
+            "/api/properties/search/",
+            {"query": "двухкомнатная квартира в центре Берлина"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["interpreted_filters"]["city"], "Berlin")
+        self.assertEqual(
+            response.data["interpreted_filters"]["property_type"],
+            Property.PropertyType.APARTMENT,
+        )
+        self.assertEqual(response.data["interpreted_filters"]["rooms_min"], 2)

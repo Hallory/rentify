@@ -4,14 +4,16 @@ from analytics.models import PropertyView, SearchHistory
 from django.db.models import F
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import permissions, viewsets
+from drf_spectacular.utils import extend_schema
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 
 from .filters import PropertyFilter
 from .models import Property
-from .serializers import PropertySerializer
+from .search import build_property_queryset, parse_local_query
+from .serializers import PropertySearchRequestSerializer, PropertySerializer
 
 
 def normalize_query(value):
@@ -158,3 +160,50 @@ class PropertyViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(rental_property)
         return Response(serializer.data)
+
+    @extend_schema(
+        request=PropertySearchRequestSerializer,
+        responses=PropertySearchRequestSerializer,
+    )
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="search",
+        permission_classes=[permissions.AllowAny],
+    )
+    def smart_search(self, request):
+        request_serializer = PropertySearchRequestSerializer(data=request.data)
+        request_serializer.is_valid(raise_exception=True)
+
+        query = request_serializer.validated_data["query"]
+        filters, confidence = parse_local_query(query)
+
+        warnings = []
+        if confidence == 0:
+            return Response(
+                {
+                    "query": query,
+                    "mode": "local",
+                    "interpreted_filters": filters,
+                    "results_count": 0,
+                    "results": [],
+                    "warnings": ["Could not confidently interpret the search query."],
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        queryset = build_property_queryset(filters=filters)
+        serializer = self.get_serializer(queryset, many=True)
+
+        return Response(
+            {
+                "query": query,
+                "mode": "local",
+                "interpreted_filters": filters,
+                "confidence": confidence,
+                "results_count": queryset.count(),
+                "results": serializer.data,
+                "warnings": warnings,
+            },
+            status=status.HTTP_200_OK,
+        )
