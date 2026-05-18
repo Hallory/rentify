@@ -89,6 +89,17 @@ class BookingViewSet(
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        if booking.check_in <= timezone.localdate() + timezone.timedelta(days=3):
+            return Response(
+                {
+                    "detail": (
+                        "Bookings can only be cancelled more than 3 days "
+                        "before check-in."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         booking.status = Booking.Status.CANCELLED
         booking.cancelled_at = timezone.now()
         booking.save(update_fields=["status", "cancelled_at", "updated_at"])

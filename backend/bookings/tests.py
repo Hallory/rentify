@@ -218,3 +218,31 @@ class BookingPermissionTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_tenant_cannot_cancel_booking_within_three_days_of_check_in(self):
+        self.booking.check_in = timezone.localdate() + timedelta(days=3)
+        self.booking.check_out = timezone.localdate() + timedelta(days=6)
+        self.booking.save(update_fields=["check_in", "check_out"])
+
+        self.client.force_authenticate(user=self.tenant)
+
+        response = self.client.patch(f"/api/bookings/{self.booking.id}/cancel/")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, Booking.Status.PENDING)
+        self.assertIsNone(self.booking.cancelled_at)
+
+    def test_tenant_can_cancel_booking_more_than_three_days_before_check_in(self):
+        self.booking.check_in = timezone.localdate() + timedelta(days=4)
+        self.booking.check_out = timezone.localdate() + timedelta(days=7)
+        self.booking.save(update_fields=["check_in", "check_out"])
+
+        self.client.force_authenticate(user=self.tenant)
+
+        response = self.client.patch(f"/api/bookings/{self.booking.id}/cancel/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.status, Booking.Status.CANCELLED)
+        self.assertIsNotNone(self.booking.cancelled_at)
