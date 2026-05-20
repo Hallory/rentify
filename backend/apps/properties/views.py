@@ -1,7 +1,7 @@
 import re
 
 from analytics.models import PropertyView, SearchHistory
-from django.db.models import F
+from django.db.models import F, Q
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
@@ -61,6 +61,11 @@ class PropertyViewSet(viewsets.ModelViewSet):
         )
 
         if self.request.method in permissions.SAFE_METHODS:
+            user = self.request.user
+            if user and user.is_authenticated:
+                return queryset.filter(
+                    Q(status=Property.Status.PUBLISHED) | Q(owner=user)
+                )
             return queryset.filter(status=Property.Status.PUBLISHED)
 
         return queryset
