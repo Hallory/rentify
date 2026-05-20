@@ -5,6 +5,8 @@ from .models import Booking
 
 
 class BookingSerializer(serializers.ModelSerializer):
+    has_review = serializers.SerializerMethodField()
+
     class Meta:
         model = Booking
         fields = [
@@ -20,6 +22,7 @@ class BookingSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "cancelled_at",
+            "has_review",
         ]
         read_only_fields = [
             "id",
@@ -30,7 +33,11 @@ class BookingSerializer(serializers.ModelSerializer):
             "updated_at",
             "cancelled_at",
             "user",
+            "has_review",
         ]
+
+    def get_has_review(self, obj):
+        return hasattr(obj, "review")
 
     def validate(self, attrs):
         request = self.context.get("request")

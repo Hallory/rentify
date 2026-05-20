@@ -105,12 +105,12 @@ def parse_local_query(query):
     }
 
     for token, city in KNOWN_CITIES.items():
-        if token in normalized:
+        if re.search(rf"\b{token}\b", normalized):
             filters["city"] = city
             break
 
     for token, property_type in PROPERTY_TYPE_ALIASES.items():
-        if token in normalized:
+        if re.search(rf"\b{token}\b", normalized):
             filters["property_type"] = property_type
             break
 
@@ -126,15 +126,15 @@ def parse_local_query(query):
         filters["guests"] = int(guest_match.group(1))
 
     for token, amenity in AMENITY_ALIASES.items():
-        if token in normalized and amenity not in filters["amenities"]:
+        if re.search(rf"\b{token}\b", normalized) and amenity not in filters["amenities"]:
             filters["amenities"].append(amenity)
 
     for token, keyword in KEYWORD_ALIASES.items():
-        if token in normalized and keyword not in filters["keywords"]:
+        if re.search(rf"\b{token}\b", normalized) and keyword not in filters["keywords"]:
             filters["keywords"].append(keyword)
 
     for token, rooms in ROOM_WORDS.items():
-        if token in normalized:
+        if re.search(rf"\b{token}\b", normalized):
             filters["rooms_min"] = rooms
             break
 

@@ -180,6 +180,30 @@ class PropertyViewSet(viewsets.ModelViewSet):
 
         warnings = []
         if confidence == 0:
+            user = request.user if request.user.is_authenticated else None
+            normalized_q = query.strip().lower()
+            existing_history = None
+            if user:
+                existing_history = SearchHistory.objects.filter(user=user, normalized_query=normalized_q).first()
+            else:
+                existing_history = SearchHistory.objects.filter(user__isnull=True, normalized_query=normalized_q).first()
+
+            if existing_history:
+                existing_history.query = query
+                existing_history.city = ""
+                existing_history.property_type = ""
+                existing_history.results_count = 0
+                existing_history.created_at = timezone.now()
+                existing_history.save(update_fields=["query", "city", "property_type", "results_count", "created_at"])
+            else:
+                SearchHistory.objects.create(
+                    user=user,
+                    query=query,
+                    normalized_query=normalized_q,
+                    city="",
+                    property_type="",
+                    results_count=0,
+                )
             return Response(
                 {
                     "query": query,
@@ -194,6 +218,42 @@ class PropertyViewSet(viewsets.ModelViewSet):
 
         queryset = build_property_queryset(filters=filters)
         serializer = self.get_serializer(queryset, many=True)
+
+        user = request.user if request.user.is_authenticated else None
+        normalized_q = query.strip().lower()
+        existing_history = None
+        if user:
+            existing_history = SearchHistory.objects.filter(user=user, normalized_query=normalized_q).first()
+        else:
+            existing_history = SearchHistory.objects.filter(user__isnull=True, normalized_query=normalized_q).first()
+
+        if existing_history:
+            existing_history.query = query
+            existing_history.city = filters.get("city", "") or ""
+            existing_history.property_type = filters.get("property_type", "") or ""
+            existing_history.price_min = filters.get("price_min")
+            existing_history.price_max = filters.get("price_max")
+            existing_history.rooms_min = filters.get("rooms_min")
+            existing_history.rooms_max = filters.get("rooms_max")
+            existing_history.results_count = queryset.count()
+            existing_history.created_at = timezone.now()
+            existing_history.save(update_fields=[
+                "query", "city", "property_type", "price_min", "price_max",
+                "rooms_min", "rooms_max", "results_count", "created_at"
+            ])
+        else:
+            SearchHistory.objects.create(
+                user=user,
+                query=query,
+                normalized_query=normalized_q,
+                city=filters.get("city", "") or "",
+                property_type=filters.get("property_type", "") or "",
+                price_min=filters.get("price_min"),
+                price_max=filters.get("price_max"),
+                rooms_min=filters.get("rooms_min"),
+                rooms_max=filters.get("rooms_max"),
+                results_count=queryset.count(),
+            )
 
         return Response(
             {

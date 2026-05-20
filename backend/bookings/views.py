@@ -25,6 +25,12 @@ class BookingViewSet(
     def get_queryset(self):
         user = self.request.user
 
+        today = timezone.localdate()
+        Booking.objects.filter(
+            status=Booking.Status.CONFIRMED,
+            check_out__lt=today
+        ).update(status=Booking.Status.COMPLETED)
+
         return Booking.objects.filter(
             Q(user=user) | Q(rental_property__owner=user)
         ).select_related("rental_property", "user")

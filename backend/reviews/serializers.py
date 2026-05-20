@@ -1,3 +1,4 @@
+from django.utils import timezone
 from bookings.models import Booking
 from rest_framework import serializers
 
@@ -39,6 +40,11 @@ class ReviewSerializer(serializers.ModelSerializer):
 
         if booking.rental_property.owner == request.user:
             raise serializers.ValidationError("You cannot review your own property.")
+
+        today = timezone.localdate()
+        if booking.status == Booking.Status.CONFIRMED and booking.check_out < today:
+            booking.status = Booking.Status.COMPLETED
+            booking.save(update_fields=["status", "updated_at"])
 
         if booking.status != Booking.Status.COMPLETED:
             raise serializers.ValidationError(
